@@ -9,6 +9,15 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+      - name: Test the Layout Editor JSON converter
+        run: python3 -m unittest discover -s scripts -p 'test_*.py' -v
+      - name: Generate Layout Editor JSON from the keymap
+        run: python3 scripts/keymap_to_layout_json.py config/go60.keymap --conf config/go60.conf -o go60-layout.json
+      - name: Upload Layout Editor JSON
+        uses: actions/upload-artifact@v4
+        with:
+          name: go60-layout.json
+          path: go60-layout.json
       - uses: actions/checkout@v4
         with:
           repository: moergo-sc/zmk

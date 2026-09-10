@@ -1,37 +1,113 @@
-# MoErgo Go60 Custom Configuration for ZMK
+# Go60 ZMK config with Swedish letters on a US layout
 
-![MoErgo Logo](moergo_logo.png)
+This is a fork of the official [MoErgo Go60 ZMK config](https://github.com/moergo-keyboards/go60-zmk-config).
+The keyboard sends plain US keycodes, the host runs a US layout, and å ä ö are
+typed as combos. That keeps every US symbol exactly where it is printed, avoids
+dead keys, and works the same on Linux and macOS.
 
-This repo is the official ZMK configuration of the MoErgo Go60 wireless split keyboard. Use it to develop your own keymap and easily build your own ZMK firmware to run on your Go60.
+## What this adds to the factory layout
 
-**NOTE: You can also customize the layout of your Go60 keyboard with the Go60 Layout Editor webapp. For most users Go60 Layout Editor is the recommended and simpler option. More information is available at the official MoErgo Go60 Support site (see resources below).**
+| Combo (press together) | Result | Firmware sends |
+|---|---|---|
+| `a` + `e` | å (Å with Shift) | AltGr+W |
+| `u` + `a` | ä (Ä with Shift) | AltGr+Q |
+| `u` + `o` | ö (Ö with Shift) | AltGr+P |
+| SymbolNav layer, `5` key | € | AltGr+5 |
 
-These steps will get you using your keymap on your keyboard in the fastest time possible. It uses the GitHub Actions feature to build your firmware online.
+The combos live only on the Base layer and use a 30 ms window, set by
+`SV_COMBO_TIMEOUT_MS` at the top of `config/go60.keymap`. Raise it if the
+combos miss, lower it if fast rolls like "ua" in "usual" trigger ä by mistake.
 
-If you are looking to dig deeper into ZMK and develop new functionality, it is recommended to follow the steps of installing ZMK as found on the official ZMK documentation site (linked below).
+Everything else is the factory default layout: Base, Keypad, SymbolNav, Magic
+and Factory layers, the Magic hold-tap, Bluetooth tap-dances and the Cirque
+trackpad settings.
+
+## Host setup
+
+Both hosts need a US layout with Swedish letters on the AltGr level. Right Alt
+on the Go60 becomes that AltGr modifier, so use Left Alt for Alt shortcuts.
+
+### Linux
+
+Use the `altgr-intl` variant of the `us` layout. It is the standard US layout
+with accented letters on AltGr and no dead keys on the base level.
+
+Hyprland, in `~/.config/hypr/input.lua` on Omarchy:
+
+```lua
+hl.config({
+  input = {
+    kb_layout = "us",
+    kb_variant = "altgr-intl",
+  },
+})
+```
+
+Other setups: `localectl set-x11-keymap us "" altgr-intl` or
+`setxkbmap us altgr-intl`.
+
+### macOS
+
+macOS has no built-in layout with the same chords, so this repo ships one:
+`host/macos/U.S. Swedish AltGr.keylayout`. It is Apple's U.S. layout with
+Option+W, Option+Q, Option+P and Option+5 changed to å, ä, ö and €, plus the
+usual Shift variants. Option+A, Option+O and Option+U also give å, ö and ü.
+
+1. Copy the file into `~/Library/Keyboard Layouts/` (create the folder if it
+   does not exist).
+2. Log out and back in.
+3. System Settings, Keyboard, Input Sources, Edit, `+`, then pick "Others" and
+   add "U.S. Swedish AltGr". Select it as the active input source.
+
+## Building the firmware
+
+Every push runs the GitHub Actions workflow in `.github/workflows/build.yml`.
+It uploads two artifacts:
+
+- `go60.uf2`, the combined firmware for both halves.
+- `go60-layout.json`, the same keymap in MoErgo Layout Editor format.
+
+To build locally with Docker, run `./build.sh`. It builds against the `main`
+branch of [moergo-sc/zmk](https://github.com/moergo-sc/zmk); pass a tag as the
+first argument to pin a release.
+
+Flash `go60.uf2` to both halves as described on the
+[official Go60 support site](https://moergo.com/go60-support).
+
+## Layout Editor JSON
+
+`scripts/keymap_to_layout_json.py` converts `config/go60.keymap` into the JSON
+that the [Go60 Layout Editor](https://my.moergo.com/go60/) imports. The keymap
+stays the source of truth; the JSON is a build artifact.
+
+```sh
+python3 scripts/keymap_to_layout_json.py config/go60.keymap --conf config/go60.conf -o go60-layout.json
+python3 -m unittest discover -s scripts -p 'test_*.py'
+```
+
+To import: in the Layout Editor open Settings, enable "Local Backup and
+Restore", then use the Import control in the bottom left of the edit page.
+
+What the converter understands:
+
+- Layers, combos, macros and hold-taps become first-class editor objects.
+- The Cirque listener overrides become the editor's input listener settings.
+- Behaviours the editor already provides for the Go60 are recognised by shape
+  and mapped to the editor's own keys instead of being duplicated: the Magic
+  hold-tap, the Keypad and SymbolNav tap-dances, the `bt_0` to `bt_3`
+  tap-dances with their macros, and `&sys_reset`.
+- Anything else, such as tap-dances or mod-morphs you add, is passed through
+  verbatim in `custom_defined_behaviors`, and unknown devicetree overrides go
+  to `custom_devicetree`. The editor builds them but cannot display them.
+
+The JSON shape was taken from a Factory Default export and the editor's own
+schema. MoErgo does not guarantee the format is stable, so if an import fails
+after an editor update, export a fresh layout from the editor and compare it
+with `scripts/fixtures/factory_default_layout.json`.
 
 ## Resources
-- The [official MoErgo Go60 Support](https://moergo.com/go60-support) web site. Go60 documentation and other technical resources.
-- The [official MoErgo Discord Server](https://moergo.com/discord). Instant conversations with other Go60 users.
 
-- The [official ZMK Documentation](https://zmk.dev/docs) web site. Find the answers to many of your questions about ZMK Firmware.
-- The [official ZMK Discord Server](https://discord.gg/8cfMkQksSB). Instant conversations with other ZMK developers and users. Great technical resource!
-
-- The [official MoErgo ZMK Distribution](https://github.com/moergo-sc/zmk). Repository for ZMK firmware customized for Go60 and Glove80.
-
-## Instructions
-1. Log into, or sign up for, your personal GitHub account.
-2. Create your own repository using this repository as a template ([instructions](https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-repository-from-a-template)) and check it out on your local computer.
-3. Edit the keymap file(s) to suit your needs
-4. Commit and push your changes to your personal repo. Upon pushing it, GitHub Actions will start building a new version of your firmware with the updated keymap.
-
-## Firmware Files
-To locate your firmware files and reflash your Go60...
-1. log into GitHub and navigate to your personal config repository you just uploaded your keymap changes to.
-2. Click "Actions" in the main navigation, and in the left navigation click the "Build" link.
-3. Select the desired workflow run in the centre area of the page (based on date and time of the build you wish to use). You can also start a new build from this page by clicking the "Run workflow" button.
-4. After clicking the desired workflow run, you should be presented with a section at the bottom of the page called "Artifacts". This section contains the results of your build, in a file called "go60.uf2"
-5. Download the go60.uf2
-6. Flash the firmware to Go60 according to the user documentation on the official Go60 Support website (linked above)
-
-Your keyboard is now ready to use.
+- [Official MoErgo Go60 Support](https://moergo.com/go60-support)
+- [MoErgo Discord](https://moergo.com/discord)
+- [ZMK documentation](https://zmk.dev/docs)
+- [MoErgo ZMK distribution](https://github.com/moergo-sc/zmk)

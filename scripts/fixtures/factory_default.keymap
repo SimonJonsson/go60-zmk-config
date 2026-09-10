@@ -24,11 +24,6 @@
 #define LAYER_Magic 3
 #define LAYER_Factory 4
 
-// Swedish letters are typed as combos on the Base layer. The host runs a US
-// layout with AltGr letters: Linux us(altgr-intl), or the macOS layout in
-// host/macos. Shift passes through, so Shift + combo gives the capital.
-#define SV_COMBO_TIMEOUT_MS 30
-
 / {
     input_processors {
         zip_click_to_right_click_mapper: zip_click_to_right_click_mapper {
@@ -36,29 +31,6 @@
             #input-processor-cells = <0>;
             type = <INPUT_EV_KEY>;
             map = <INPUT_BTN_0 INPUT_BTN_1>;
-        };
-    };
-
-    combos {
-        compatible = "zmk,combos";
-        // Key positions on the Base layer: A=25 E=15 U=19 O=21.
-        combo_aring {
-            timeout-ms = <SV_COMBO_TIMEOUT_MS>;
-            key-positions = <25 15>;
-            bindings = <&kp RA(W)>;
-            layers = <LAYER_Base>;
-        };
-        combo_adiaeresis {
-            timeout-ms = <SV_COMBO_TIMEOUT_MS>;
-            key-positions = <19 25>;
-            bindings = <&kp RA(Q)>;
-            layers = <LAYER_Base>;
-        };
-        combo_odiaeresis {
-            timeout-ms = <SV_COMBO_TIMEOUT_MS>;
-            key-positions = <19 21>;
-            bindings = <&kp RA(P)>;
-            layers = <LAYER_Base>;
         };
     };
 
@@ -174,7 +146,7 @@
 
         layer_SymbolNav {
             bindings = <
-              &kp INS    &kp F1     &kp F2    &kp F3     &kp F4     &kp RA(N5)                                       &kp F6    &kp F7           &kp F8       &kp F9          &kp F10    &kp F11
+              &kp INS    &kp F1     &kp F2    &kp F3     &kp F4     &kp F5                                       &kp F6    &kp F7           &kp F8       &kp F9          &kp F10    &kp F11
              &kp SLCK  &kp EXCL   &kp HOME    &kp UP    &kp END  &kp PG_UP                                     &kp LPAR  &kp RPAR           &kp UP    &kp PRCNT        &kp K_APP    &kp F12
              &kp CAPS    &kp AT   &kp LEFT  &kp DOWN  &kp RIGHT  &kp PG_DN                                     &kp DLLR  &kp LEFT         &kp DOWN    &kp RIGHT  &kp PAUSE_BREAK  &kp PSCRN
  &magic LAYER_Magic 0  &kp HASH   &kp LBKT  &kp RBKT   &kp LBRC   &kp RBRC                                     &kp AMPS  &kp STAR        &kp UNDER     &kp PLUS        &kp LSHFT  &kp LCTRL

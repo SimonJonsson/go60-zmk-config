@@ -1,2 +1,4 @@
 *~
 *.uf2
+go60-layout.json
+__pycache__/
