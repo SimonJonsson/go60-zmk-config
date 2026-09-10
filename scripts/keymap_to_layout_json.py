@@ -43,8 +43,31 @@ EDITOR_PROVIDED_INPUT_PROCESSORS = {"zip_click_to_right_click_mapper"}
 BT_SELECT_RE = re.compile(r"^bt_select_(\d)$")
 
 
+PREPROCESSOR_RE = re.compile(r"^\s*#\s*(include|define|undef|if|ifdef|ifndef|elif|else|endif|pragma|error|warning)\b")
+
+
 class KeymapError(Exception):
     pass
+
+
+def substitute_defines(raw: str, defines: dict[str, str]) -> str:
+    """Expand the keymap's own simple #defines inside pass-through text. The
+    editor generates LAYER_<name> defines itself, so those are left alone."""
+    for name, value in defines.items():
+        if not name.startswith("LAYER_"):
+            raw = re.sub(rf"\b{re.escape(name)}\b", value, raw)
+    return raw
+
+
+def reindent(raw: str, spaces: int) -> str:
+    """Re-indent a node's source text so it sits at `spaces` columns."""
+    lines = raw.splitlines()
+    rest = [l for l in lines[1:] if l.strip()]
+    common = min((len(l) - len(l.lstrip()) for l in rest), default=0)
+    out = [" " * spaces + lines[0].strip()]
+    for l in lines[1:]:
+        out.append(" " * spaces + l[common:] if l.strip() else "")
+    return "\n".join(out)
 
 
 # --------------------------------------------------------------------------
@@ -82,14 +105,17 @@ def collect_defines(text: str) -> tuple[dict[str, str], str]:
     preprocessor lines."""
     defines: dict[str, str] = {}
     kept: list[str] = []
+    text = re.sub(r"\\\n", " ", text)  # join backslash-continued lines
     for line in text.splitlines():
+        if re.match(r"^\s*#\s*define\s+\w+\(", line):
+            raise KeymapError("function-like #define macros are not supported; write the nodes out explicitly")
         m = re.match(r"^\s*#\s*define\s+(\w+)\s+(\S+)\s*$", line)
         if m:
             defines[m.group(1)] = m.group(2)
             continue
-        if re.match(r"^\s*#", line):
+        if PREPROCESSOR_RE.match(line):
             continue
-        kept.append(line)
+        kept.append(line)  # devicetree properties like #binding-cells stay
     return defines, "\n".join(kept)
 
 
@@ -493,7 +519,7 @@ def convert(
             if b.compatible() == "zmk,behavior-hold-tap":
                 hold_taps.append(hold_tap_to_json(b, defines))
             else:
-                custom_behaviours.append(b.raw)
+                custom_behaviours.append(reindent(substitute_defines(b.raw, defines), 8))
 
     macros: list[dict] = []
     if macros_node is not None:
@@ -513,11 +539,11 @@ def convert(
         if n.name in ("keymap", "behaviors", "macros", "combos"):
             continue
         if n.name == "input_processors":
-            kept = [c.raw for c in n.children if (c.label or c.name) not in EDITOR_PROVIDED_INPUT_PROCESSORS]
+            kept = [reindent(substitute_defines(c.raw, defines), 8) for c in n.children if (c.label or c.name) not in EDITOR_PROVIDED_INPUT_PROCESSORS]
             if kept:
-                custom_root_nodes.append("input_processors {\n" + "\n".join(kept) + "\n};")
+                custom_root_nodes.append("    input_processors {\n" + "\n".join(kept) + "\n    };")
             continue
-        custom_root_nodes.append(n.raw)
+        custom_root_nodes.append(reindent(substitute_defines(n.raw, defines), 4))
 
     listeners: list[dict] = []
     custom_devicetree: list[str] = []
@@ -525,7 +551,7 @@ def convert(
         if n.name.startswith("&") and n.name.endswith("_listener"):
             listeners.append(listener_to_json(n, defines))
         else:
-            custom_devicetree.append(n.raw)
+            custom_devicetree.append(reindent(substitute_defines(n.raw, defines), 0))
 
     custom_parts: list[str] = []
     if custom_behaviours:

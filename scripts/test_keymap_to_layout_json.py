@@ -116,6 +116,7 @@ SNIPPET = """
 #define LAYER_Base 0
 #define LAYER_Nav 1
 #define TERM 175
+#define MORPH_MODS (MOD_LSFT|MOD_RSFT)
 
 / {
     combos {
@@ -142,7 +143,7 @@ SNIPPET = """
             compatible = "zmk,behavior-mod-morph";
             #binding-cells = <0>;
             bindings = <&kp COMMA>, <&kp SEMI>;
-            mods = <(MOD_LSFT|MOD_RSFT)>;
+            mods = <MORPH_MODS>;
         };
     };
     macros {
@@ -247,6 +248,10 @@ class Snippet(unittest.TestCase):
     def test_mod_morph_goes_to_custom_behaviors(self):
         custom = self.doc["custom_defined_behaviors"]
         self.assertIn('compatible = "zmk,behavior-mod-morph"', custom)
+        self.assertIn("#binding-cells = <0>;", custom)  # devicetree properties are not preprocessor lines
+        self.assertIn("        shifty: shifty {\n            compatible", custom)
+        self.assertIn("mods = <(MOD_LSFT|MOD_RSFT)>;", custom)  # own defines expanded
+        self.assertNotIn("MORPH_MODS", custom)
         self.assertNotIn("zmk,behavior-hold-tap", custom)
         self.assertTrue(custom.startswith("/ {\n    behaviors {"))
 
